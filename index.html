@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Smart Calculator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="calculator">
+        <div class="display">
+            <textarea id="display" rows="3" placeholder="Start typing your equation..."></textarea>
+        </div>
+        <div class="buttons">
+            <button onclick="clearDisplay()">C</button>
+            <button onclick="backspace()">⌫</button>
+            <button onclick="appendToDisplay('%')">%</button>
+            <button onclick="appendToDisplay('/')">/</button>
+            <button onclick="appendToDisplay('7')">7</button>
+            <button onclick="appendToDisplay('8')">8</button>
+            <button onclick="appendToDisplay('9')">9</button>
+            <button onclick="appendToDisplay('*')">*</button>
+            <button onclick="appendToDisplay('4')">4</button>
+            <button onclick="appendToDisplay('5')">5</button>
+            <button onclick="appendToDisplay('6')">6</button>
+            <button onclick="appendToDisplay('-')">-</button>
+            <button onclick="appendToDisplay('1')">1</button>
+            <button onclick="appendToDisplay('2')">2</button>
+            <button onclick="appendToDisplay('3')">3</button>
+            <button onclick="appendToDisplay('+')">+</button>
+            <button onclick="appendToDisplay('0')">0</button>
+            <button onclick="appendToDisplay('.')">.</button>
+       
+            <button onclick="appendToDisplay('(')">(</button>
+            <button onclick="appendToDisplay(')')">)</button>
+            <button onclick="appendToDisplay('sin(')">sin</button>
+            <button onclick="appendToDisplay('cos(')">cos</button>
+            <button onclick="appendToDisplay('tan(')">tan</button>
+            <button onclick="appendToDisplay('ln(')">ln</button>
+            <button onclick="appendToDisplay('log(')">log</button>
+            <button id="explainButton" onclick="explain()">Explain</button>     <button onclick="calculate()" style="background: #4CAF50">=</button>
+        </div>
+        <div class="explanation-box">
+            <p id="explanation"></p>
+        </div>
+    </div>
+
+    <script>
+    const apiKey = 'AIzaSyDO2YVW5g8XgDEnBCH1LEur7SOCAEr4rYk'; 
+    const display = document.getElementById('display');
+    const explanationDisplay = document.getElementById('explanation');
+    const explainButton = document.getElementById('explainButton');
+    const explanationBox = document.querySelector('.explanation-box'); 
+
+    function appendToDisplay(value) {
+        display.value += value;
+    }
+
+    function clearDisplay() {
+        display.value = '';
+        explanationDisplay.textContent = '';
+        resetDisplayGlow();  
+        resetExplanationBoxGlow(); 
+    }
+
+    function backspace() {
+        display.value = display.value.slice(0, -1);
+        explanationDisplay.textContent = '';
+        resetDisplayGlow();  
+        resetExplanationBoxGlow(); 
+    }
+
+    function calculate() {
+        const input = display.value.trim();
+        try {
+            const result = eval(input);
+            display.value = result;
+            resetDisplayGlow();  
+            resetExplanationBoxGlow(); 
+        } catch (error) {
+            display.value = 'Tap explain to get a detailed answer.';
+            resetDisplayGlow();  
+            resetExplanationBoxGlow(); 
+        }
+    }
+
+    async function explain() {
+        const prompt = `Explain in bullet points how you got the answer to this calculation: ${display.value}. Make it easy to understand.`;
+        explanationDisplay.textContent = "Thinking..."; 
+        brieflyGlowExplainButton();
+
+        try {
+            const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-goog-api-key': apiKey
+                },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }]
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) {
+                const explanation = data.candidates[0].content.parts[0].text;
+                const formattedExplanation = formatExplanation(explanation);
+                explanationDisplay.innerHTML = formattedExplanation;  
+                startExplanationBoxGlow();  
+            } else {
+                explanationDisplay.textContent = 'Could not generate explanation.';
+            }
+
+        } catch (error) {
+            console.error('Error:', error);
+            explanationDisplay.textContent = `Error: ${error.message}`;
+        }
+    }
+
+    function formatExplanation(explanation) {
+        const formattedExplanation = explanation.replace(/\n/g, '<br>');
+        return formattedExplanation;
+    }
+
+    function brieflyGlowExplainButton() {
+        const originalColor = explainButton.style.boxShadow;
+        explainButton.style.boxShadow = "0 0 15px 3px #00FF00"; 
+        setTimeout(() => {
+            explainButton.style.boxShadow = originalColor; 
+        }, 4000); 
+    }
+
+    function startExplanationBoxGlow() {
+        const colors = ["#00FF00", "#33FF00", "#66FF00", "#99FF00", "#CCFF00", "#FFFF00", "#FFCC00", "#FF9900", "#FF6600", "#FF3300"];
+        let index = 0;
+
+        explanationBox.style.transition = "box-shadow 0.5s ease";
+
+        window.explanationBoxGlowInterval = setInterval(() => {
+            explanationBox.style.boxShadow = `0 0 20px 5px ${colors[index]}`;
+            index = (index + 1) % colors.length; 
+        }, 500); 
+
+        setTimeout(resetExplanationBoxGlow, 4000);
+    }
+
+    function resetExplanationBoxGlow() {
+        clearInterval(window.explanationBoxGlowInterval);
+        explanationBox.style.boxShadow = "";
+    }
+
+    function resetDisplayGlow() {
+        display.style.boxShadow = "";
+    }
+    </script>
+    
+</body>
+</html>
